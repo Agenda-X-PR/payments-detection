@@ -1,42 +1,32 @@
 name: CI
+
 on:
   push:
   pull_request:
+
 jobs:
   python-checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install -r services/alert-api/requirements.txt pytest
-      - run: python -m compileall -q services
-- name: Install all service dependencies
-  run: |
-    pip install -r services/alert-api/requirements.txt
-    pip install -r services/detector/requirements.txt
-    pip install pytest pyyaml
 
-- name: Compile check all services
-  run: python -m compileall -q services
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r services/alert-api/requirements.txt
+          pip install -r services/detector/requirements.txt
+          pip install pytest pyyaml
 
-- name: Validate YAML rules parse
-  run: |
-    python -c "import yaml, pathlib; [yaml.safe_load(p.read_text()) for p in pathlib.Path('rules').glob('*.yml')]"
+      - name: Compile check all services
+        run: python -m compileall -q services
 
-- name: Install all service dependencies
-  run: |
-    pip install -r services/alert-api/requirements.txt
-    pip install -r services/detector/requirements.txt
-    pip install pytest pyyaml
+      - name: Validate YAML rules parse
+        run: |
+          python -c "import yaml, pathlib; files=list(pathlib.Path('rules').glob('*.yml')); print(f'Found {len(files)} rule file(s)'); [yaml.safe_load(p.read_text()) for p in files]"
 
-- name: Compile check all services
-  run: python -m compileall -q services
-
-- name: Validate YAML rules parse
-  run: |
-    python -c "import yaml, pathlib; [yaml.safe_load(p.read_text()) for p in pathlib.Path('rules').glob('*.yml')]"
-
-- name: Run tests
-  run: PYTHONPATH=services/alert-api pytest -q services/alert-api/test_security.py
+      - name: Run security tests
+        run: PYTHONPATH=services/alert-api pytest -q services/alert-api/test_security.py
