@@ -1,0 +1,1 @@
+{"description":"The same provider event ID with changed payload hash or signature should alert.","positive":{"provider":"demo","event_id":"evt_fixture_replay","signatures":["sig-a","sig-b"],"payload_hashes":["hash-a","hash-b"]},"negative":{"provider":"demo","event_id":"evt_fixture_once","signatures":["sig-a"],"payload_hashes":["hash-a"]}}

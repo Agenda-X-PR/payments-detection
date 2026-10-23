@@ -1,0 +1,1 @@
+{"description":"More than five invalid events from the same IP in sixty seconds should alert.","positive":{"count":6,"source_ip":"198.51.100.12","signature_valid":false,"window_seconds":60},"negative":{"count":5,"source_ip":"198.51.100.13","signature_valid":false,"window_seconds":60}}

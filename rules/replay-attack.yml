@@ -1,0 +1,10 @@
+title: Replayed Payment Event
+id: pay-replay-001
+level: critical
+description: A provider event ID has been observed with different signatures or body hashes.
+aggregation:
+  kind: replay_by
+  field: event_id
+condition: payment_event
+falsepositives:
+  - Provider retries that alter signed metadata

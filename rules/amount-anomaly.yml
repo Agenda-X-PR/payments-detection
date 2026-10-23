@@ -1,0 +1,11 @@
+title: Amount Anomaly
+id: pay-amount-001
+level: medium
+description: A successful payment is non-positive or exceeds the trailing 24-hour mean by more than three population standard deviations.
+aggregation:
+  kind: amount_baseline
+  field: amount
+  window_hours: 24
+  minimum_samples: 10
+  z_score: 3
+condition: payment_success

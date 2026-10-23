@@ -1,0 +1,1 @@
+{"description":"15 events from one source IP should fire; 5 events should not.","positive":{"count":15,"source_ip":"198.51.100.10","window_seconds":60},"negative":{"count":5,"source_ip":"198.51.100.11","window_seconds":60}}

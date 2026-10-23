@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-only-change-me}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d payments"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports: ["127.0.0.1:5432:5432"]
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports: ["127.0.0.1:6379:6379"]
+  alert-api:
+    build: ./services/alert-api
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-dev-only-change-me}@postgres/payments
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?Set WEBHOOK_SECRET in .env}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      CORS_ORIGINS: http://localhost:5173
+    depends_on:
+      postgres: {condition: service_healthy}
+    ports: ["127.0.0.1:8002:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  detector:
+    build: ./services/detector
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:-dev-only-change-me}@postgres/payments
+      REDIS_URL: redis://redis:6379/0
+      RULES_DIR: /rules
+      POLL_INTERVAL: 2
+    volumes: ["./rules:/rules:ro"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+  dashboard:
+    build: ./services/dashboard
+    depends_on: [alert-api]
+    ports: ["127.0.0.1:5173:80"]
+volumes:
+  pgdata:

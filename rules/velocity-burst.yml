@@ -1,0 +1,12 @@
+title: Payment Velocity Burst
+id: pay-velocity-001
+level: high
+description: More than 10 payment events from the same source IP in a rolling 60-second window.
+aggregation:
+  kind: count_by
+  field: source_ip
+  window_seconds: 60
+  threshold: 10
+condition: payment_event
+falsepositives:
+  - Legitimate bulk payment processors
