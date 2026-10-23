@@ -17,8 +17,6 @@ from pydantic import BaseModel
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://app:dev@localhost/payments")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "dev-only-change-me")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 MAX_BODY = 256 * 1024
 
 SENSITIVE_KEYS = {
@@ -88,6 +86,48 @@ def fallback_explanation(alert: dict) -> str:
 
 
 def model_explanation(alert: dict) -> str:
+    """Call Groq with only rule_id, severity, and numeric context. No payload or identifiers."""
+    api_key = os.getenv("GROQ_API_KEY", "")
+    if not api_key:
+        return fallback_explanation(alert)
+    model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+
+    context = alert.get("context", {}) or {}
+    numeric_context = {k: v for k, v in context.items() if isinstance(v, (int, float))}
+    prompt_context = {
+        "rule_id": alert.get("rule_id", ""),
+        "severity": alert.get("severity", ""),
+        "context": numeric_context,
+    }
+    system = (
+        "You are a security analyst explaining a detection alert to a developer. "
+        "Write 2-3 sentences. Reference the rule's pattern. Give one concrete next step. "
+        "Do not invent details not present in the provided context."
+    )
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": json.dumps(prompt_context)},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 300,
+    }
+    request = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data=json.dumps(body).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            data = json.loads(response.read())
+            return data["choices"][0]["message"]["content"].strip()
+    except Exception:
+        return fallback_explanation(alert)
     """Call Groq with only rule_id, severity, and numeric context. No payload or identifiers."""
     if not GROQ_API_KEY:
         return fallback_explanation(alert)
